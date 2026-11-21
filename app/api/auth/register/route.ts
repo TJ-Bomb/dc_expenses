@@ -14,6 +14,12 @@ export async function POST(req:Request) {
        !/^[a-z0-9_.-]+$/.test(username)||password.length<12) {
       return Response.json({error:'Enter a name, username (3–60 letters/numbers), and password (at least 12 characters).'},{status:400});
     }
+    // Avoid expensive password hashing once the initial administrator exists.
+    const existing = await sql`SELECT 1 FROM app_users LIMIT 1`;
+    if (existing.length) {
+      return Response.json({error:'Public registration is closed. Ask an administrator to create your account.'},{status:403});
+    }
+
     const hash=await bcrypt.hash(password,12);
     const [, rows] = await sql.transaction([
       sql`SELECT pg_advisory_xact_lock(921170)`,
