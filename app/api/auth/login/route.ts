@@ -12,6 +12,9 @@ export async function POST(req:Request) {
     if(!username||username.length>60||!password||password.length>256)
       return Response.json({error:'Invalid username or password.'},{status:401});
 
+    // Keep the throttle table bounded; expired keys no longer contribute to lockouts.
+    await sql`DELETE FROM auth_login_attempts WHERE window_started_at < NOW()-INTERVAL '24 hours'`;
+
     const ip=(req.headers.get('x-real-ip')||'unknown').slice(0,100);
     const attemptKey=ip+':'+username;
 
