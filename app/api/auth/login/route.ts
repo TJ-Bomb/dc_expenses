@@ -12,8 +12,7 @@ export async function POST(req:Request) {
     if(!username||username.length>60||!password||password.length>256)
       return Response.json({error:'Invalid username or password.'},{status:401});
 
-    const forwarded=req.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
-    const ip=(req.headers.get('x-real-ip')||forwarded||'unknown').slice(0,100);
+    const ip=(req.headers.get('x-real-ip')||'unknown').slice(0,100);
     const attemptKey=ip+':'+username;
 
     const attempts=await sql`
