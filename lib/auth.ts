@@ -12,7 +12,7 @@ export type SessionUser = { id:number; full_name:string; username:string; role:'
 
 export async function setSession(user:SessionUser) {
   const token = await new SignJWT({ id:user.id, full_name:user.full_name, username:user.username, role:user.role })
-    .setProtectedHeader({alg:'HS256'}).setIssuedAt().setExpirationTime(\`\${SESSION_MAX_AGE_SECONDS}s\`).sign(key);
+    .setProtectedHeader({alg:'HS256'}).setIssuedAt().setExpirationTime(`${SESSION_MAX_AGE_SECONDS}s`).sign(key);
   (await cookies()).set(SESSION_COOKIE, token, {
     httpOnly:true, secure:process.env.NODE_ENV==='production', sameSite:'strict',
     path:'/', maxAge:SESSION_MAX_AGE_SECONDS,
@@ -39,10 +39,12 @@ export async function getSession():Promise<SessionUser|null> {
 }
 
 export async function requireUser() {
-  const user=await getSession();
-  if(!user) return {user:null,response:Response.json({error:'Authentication required'},{status:401})};
-  const rows=await sql\`SELECT is_active FROM app_users WHERE id=\${user.id} LIMIT 1\`;
-  if(!rows[0]?.is_active) return {user:null,response:Response.json({error:'Account disabled'},{status:403})};
+  const session=await getSession();
+  if(!session) return {user:null,response:Response.json({error:'Authentication required'},{status:401})};
+  const rows=await sql`SELECT id,full_name,username,role,is_active FROM app_users WHERE id=${session.id} LIMIT 1`;
+  const account=rows[0];
+  if(!account?.is_active) return {user:null,response:Response.json({error:'Account disabled'},{status:403})};
+  const user:SessionUser={id:Number(account.id),full_name:account.full_name,username:account.username,role:account.role};
   return {user,response:null};
 }
 export function isAdmin(role:string){return role==='admin';}
